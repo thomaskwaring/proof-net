@@ -1,1 +1,1 @@
-import ProofNet.Basic
+import ProofNet.Connective
