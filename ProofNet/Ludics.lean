@@ -1,35 +1,9 @@
-import Mathlib.Data.List.Infix
-import Mathlib.Data.Finset.Insert
-import Mathlib.Data.Finset.Image
+import ProofNet.Vorspeil.Locus
 import Mathlib.Logic.Function.Basic
 import Mathlib.Data.ZMod.Defs
 import Mathlib.Order.SetNotation
 
 open Function Finset List
-
-abbrev Locus := List ℕ
-
-namespace Locus
-
-/-- A sublocus is an extension. -/
-def IsSublocus (ζ ξ : Locus) : Prop := swap IsPrefix ζ ξ
-
-instance : LE Locus := ⟨IsSublocus⟩
-instance : IsPartialOrder Locus (· ≤ ·) :=
-  inferInstanceAs (IsPartialOrder (List ℕ) <| Function.swap List.IsPrefix)
-instance : PartialOrder Locus where
-  le_refl := refl
-  le_antisymm _ _ h h' := antisymm h h'
-  le_trans a b c h h' := IsTrans.trans _ _ _ h h'
-  lt a b := a ≤ b ∧ ¬ b ≤ a
-
-def Disjoint (ζ ξ : Locus) : Prop := ¬ ζ ≤ ξ ∧ ¬ ξ ≤ ζ
-
-def concat (ζ : Locus) (i : ℕ) : Locus := ζ ++ [i]
-
-def mconcat (ζ : Locus) (J : Finset ℕ) : Finset Locus := J.image ζ.concat
-
-end Locus
 
 inductive Pitchfork where
   | neg : Locus → Finset Locus → Pitchfork
@@ -74,3 +48,16 @@ def PDessin.chronicles {f : Option Locus} : PDessin f → Set (List Action)
   | daimon => {[Action.daimon]}
   | consPos ξ I ψ_ => {[]} ∪ {(Action.pos ξ I) :: k | (i : I) (k ∈ (ψ_ i).chronicles)}
   | consNeg ζ φ_ => {(Action.neg ζ J) :: k | (J : Finset ℕ) (k : (φ_ J).chronicles)}
+
+inductive Dessin : {f : Option Locus} → PDessin f → Pitchfork → Type where
+  | fid {Λ : Finset Locus} (h : (pos Λ).WF) : Dessin .fides (pos Λ)
+  | dai {Λ : Finset Locus} (h : (pos Λ).WF) : Dessin .fides (pos Λ)
+  | consPos (ξ : Locus) (I : Finset ℕ) (ψ_ : (i : I) → PDessin (ξ.concat i)) (Λ : Finset Locus)
+      (Λ_ : (i : I) → Finset Locus) (hsub : ∀ i : I, Λ_ i ⊆ Λ)
+      (hdisj : ∀ (i j : I), i ≠ j → Λ_ i ∩ Λ_ j = ∅) (hwf : (neg ξ Λ).WF)
+      (Ψ_ : (i : I) → Dessin (ψ_ i) (neg (ξ.concat i) (Λ_ i))) :
+      Dessin (.consPos ξ I ψ_) (pos <| insert ξ Λ)
+  | consNeg (ζ : Locus) (φ_ : Finset ℕ → PDessin none) (Λ : Finset Locus)
+      (Λ_ : Finset ℕ → Finset Locus) (hsub : ∀ J : Finset ℕ, Λ_ J ⊆ Λ) (hwf : (neg ζ Λ).WF)
+      (Φ_ : (J : Finset ℕ) → Dessin (φ_ J) (.pos <| ζ.mconcat J ∪ Λ_ J)) :
+      Dessin (.consNeg ζ φ_) (neg ζ Λ)

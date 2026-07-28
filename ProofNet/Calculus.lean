@@ -1,41 +1,35 @@
 import Mathlib.Data.Multiset.ZeroCons
 import Mathlib.Data.Multiset.AddSub
+import Mathlib.Data.Fintype.Option
+import Mathlib.Data.Fintype.Sum
+import ProofNet.Formula
 
 namespace MLL
 
-universe u
-
 variable {Atom : Type*}
 
-@[grind cases]
-inductive Formula (Atom : Type*) where
-  | atom : Atom → Formula Atom
-  | atomDual : Atom → Formula Atom
-  | tensor : Formula Atom → Formula Atom → Formula Atom
-  | parr : Formula Atom → Formula Atom → Formula Atom
+-- -- is carrying around `Fintype` useful / necessary?
+-- inductive Paraproof : {α : Type*} → [Fintype α] → Sequent Atom α → Type _ where
+--   | daimon {α} [Fintype α] (Γ : Sequent Atom α) : Paraproof Γ
+--   | tensor {α β} [Fintype α] [Fintype β] (A B : Formula Atom) (Γ : Sequent Atom α)
+--       (Δ : Sequent Atom β) :
+--       Paraproof (Γ.cons A) → Paraproof (Δ.cons B) → Paraproof (Γ.sum Δ |>.cons (A ⊗ B))
+--   | parr {α} [Fintype α] (A B : Formula Atom) (Γ : Sequent Atom α) :
+--       Paraproof (Γ.cons A |>.cons B) → Paraproof (Γ.cons (A ⅋ B))
+--   | cut {α β} [Fintype α] [Fintype β] (A : Formula Atom) (Γ : Sequent Atom α)
+--       (Δ : Sequent Atom β) :
+--       Paraproof (Γ.cons A) → Paraproof (Δ.cons A.dual) → Paraproof (Γ.sum Δ)
+--   | exch {α β} [Fintype α] [Fintype β] (f : β ≃ α) (Γ : Sequent Atom α) :
+--       Paraproof Γ → Paraproof (Γ.map f)
 
-scoped infix:100 " ⊗ " => Formula.tensor
-scoped infix:95 " ⅋ " => Formula.parr
-
-def Formula.dual : Formula Atom → Formula Atom
-  | atom x => atomDual x
-  | atomDual x => atom x
-  | tensor A B => parr A.dual B.dual
-  | parr A B => tensor A.dual B.dual
-
-@[simp, grind =]
-lemma Formula.dual_dual (A : Formula Atom) : A.dual.dual = A := by
-  induction A <;> simp_all [dual]
-
-abbrev Sequent (Atom : Type*) := Multiset (Formula Atom)
-
-inductive Paraproof : Sequent Atom → Type _ where
-  | daimon (Γ : Sequent Atom) : Paraproof Γ
-  | tensor (A B : Formula Atom) (Γ Δ : Sequent Atom) :
-      Paraproof (A ::ₘ Γ) → Paraproof (B ::ₘ Δ) → Paraproof (A ⊗ B ::ₘ (Γ + Δ))
-  | parr (A B : Formula Atom) (Γ : Sequent Atom) :
-      Paraproof (A ::ₘ B ::ₘ Γ) → Paraproof (A ⅋ B ::ₘ Γ)
-  | cut (A : Formula Atom) (Γ Δ : Sequent Atom) :
-      Paraproof (A ::ₘ Γ) → Paraproof (A.dual ::ₘ Δ) → Paraproof (Γ + Δ)
+inductive CutFreeParaproof : {α : Type*} → Sequent Atom α → Type _ where
+  | daimon {α} (Γ : Sequent Atom α) : CutFreeParaproof Γ
+  | tensor {α β} (A B : Formula Atom) (Γ : Sequent Atom α)
+      (Δ : Sequent Atom β) : CutFreeParaproof (Γ.cons A) → CutFreeParaproof (Δ.cons B) →
+        CutFreeParaproof (Γ.sum Δ |>.cons (A ⊗ B))
+  | parr {α} (A B : Formula Atom) (Γ : Sequent Atom α) :
+      CutFreeParaproof (Γ.cons A |>.cons B) → CutFreeParaproof (Γ.cons (A ⅋ B))
+  | exch {α β} (f : β ≃ α) (Γ : Sequent Atom α) :
+      CutFreeParaproof Γ → CutFreeParaproof (Γ.map f)
 
 end MLL
